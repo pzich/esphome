@@ -96,10 +96,16 @@ async def prepend_filter_to_code(config, filter_id):
 def validate_mapping(value):
     if not isinstance(value, dict):
         value = cv.string(value)
-        if "->" not in value:
-            raise cv.Invalid("Mapping must contain '->'")
-        a, b = value.split("->", 1)
-        value = {CONF_FROM: a.strip(), CONF_TO: b.strip()}
+        # delimeter = config["delimeter"]
+        delimeter = "->"
+        if delimeter not in value:
+            raise cv.Invalid(f"Mapping must contain '{delimeter}'")
+        a, b = value.split(delimeter, 1)
+        # if config["strip_whitespace"]:
+        if True:
+            value = {CONF_FROM: a.strip(), CONF_TO: b.strip()}
+        else:
+            value = {CONF_FROM: a, CONF_TO: b}
 
     return cv.Schema(
         {cv.Required(CONF_FROM): cv.string, cv.Required(CONF_TO): cv.string}
@@ -107,11 +113,21 @@ def validate_mapping(value):
 
 
 @FILTER_REGISTRY.register(
-    "substitute", SubstituteFilter, cv.ensure_list(validate_mapping)
+    "substitute",
+    SubstituteFilter,
+    cv.maybe_simple_value(
+        {
+            cv.Optional("strip_whitespace", default=True): cv.boolean,
+            cv.Optional("delimeter", default="->"): cv.string,
+            cv.Required("substitutions"): cv.ensure_list(validate_mapping),
+        },
+        key="substitutions",
+    ),
 )
 async def substitute_filter_to_code(config, filter_id):
-    from_strings = [conf[CONF_FROM] for conf in config]
-    to_strings = [conf[CONF_TO] for conf in config]
+    print("SUB TO_CODE", config)
+    from_strings = [conf[CONF_FROM] for conf in config["substitutions"]]
+    to_strings = [conf[CONF_TO] for conf in config["substitutions"]]
     return cg.new_Pvariable(filter_id, from_strings, to_strings)
 
 
