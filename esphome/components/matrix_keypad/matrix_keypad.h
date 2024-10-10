@@ -29,6 +29,8 @@ class MatrixKeypad : public key_provider::KeyProvider, public Component {
   void set_debounce_time(int debounce_time) { debounce_time_ = debounce_time; };
   void set_has_diodes(int has_diodes) { has_diodes_ = has_diodes; };
   void set_has_pulldowns(int has_pulldowns) { has_pulldowns_ = has_pulldowns; };
+  int get_pressed_key() { return pressed_key_; }
+  int get_width() { return columns_.size(); }
 
   void register_listener(MatrixKeypadListener *listener);
 

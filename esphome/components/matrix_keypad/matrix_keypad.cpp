@@ -17,11 +17,7 @@ void MatrixKeypad::setup() {
   }
   for (auto *pin : this->columns_) {
     pin->setup();
-    if (has_pulldowns_) {
-      pin->pin_mode(gpio::FLAG_INPUT);
-    } else {
-      pin->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
-    }
+    pin->pin_mode(gpio::FLAG_INPUT | gpio::FLAG_PULLUP);
   }
 }
 
@@ -37,7 +33,7 @@ void MatrixKeypad::loop() {
       row->pin_mode(gpio::FLAG_OUTPUT);
     row->digital_write(has_pulldowns_);
     for (auto *col : this->columns_) {
-      if (col->digital_read() == has_pulldowns_) {
+      if (col->digital_read() == false) {
         if (key != -1) {
           error = true;
         } else {
