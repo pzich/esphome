@@ -313,6 +313,15 @@ void VL53L0XSensor::loop() {
   }
 }
 
+void VL53L0XSensor::shutdown() {
+  if (this->enable_pin_ != nullptr) {
+    this->enable_pin_->digital_write(false);
+    esphome::vl53l0x::VL53L0XSensor::enable_pin_setup_complete = false;
+  } else {
+    ESP_LOGW(TAG, "Cannot shut down without an enable pin");
+  }
+}
+
 uint32_t VL53L0XSensor::get_measurement_timing_budget_() {
   SequenceStepEnables enables{};
   SequenceStepTimeouts timeouts{};

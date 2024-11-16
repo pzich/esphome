@@ -35,6 +35,8 @@ class VL53L0XSensor : public sensor::Sensor, public PollingComponent, public i2c
 
   void loop() override;
 
+  void shutdown();
+
   void set_signal_rate_limit(float signal_rate_limit) { signal_rate_limit_ = signal_rate_limit; }
   void set_long_range(bool long_range) { long_range_ = long_range; }
   void set_timeout_us(uint32_t timeout_us) { this->timeout_us_ = timeout_us; }
