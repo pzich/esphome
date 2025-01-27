@@ -21,6 +21,7 @@ from esphome.const import (
 from . import st7789v_ns
 
 CONF_EIGHTBITCOLOR = "eightbitcolor"
+CONF_NO_DISP_BUFFER = "no_disp_buffer"
 
 CODEOWNERS = ["@kbx81"]
 
@@ -158,6 +159,7 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_POWER_SUPPLY): cv.use_id(power_supply.PowerSupply),
             cv.Optional(CONF_EIGHTBITCOLOR, default=False): cv.boolean,
+            cv.Optional(CONF_NO_DISP_BUFFER, default=False): cv.boolean,
             cv.Optional(CONF_HEIGHT): cv.int_,
             cv.Optional(CONF_WIDTH): cv.int_,
             cv.Optional(CONF_OFFSET_HEIGHT): cv.int_,
@@ -207,3 +209,5 @@ async def to_code(config):
     if CONF_POWER_SUPPLY in config:
         ps = await cg.get_variable(config[CONF_POWER_SUPPLY])
         cg.add(var.set_power_supply(ps))
+
+    cg.add(var.set_no_disp_buffer(config[CONF_NO_DISP_BUFFER]))

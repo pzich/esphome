@@ -107,6 +107,10 @@ static const uint8_t ST7789_MADCTL_GS = 0x01;
 
 static const uint8_t ST7789_MADCTL_COLOR_ORDER = ST7789_MADCTL_BGR;
 
+class ST7789V;
+
+using st7789_writer_t = std::function<void(ST7789V &)>;
+
 class ST7789V : public display::DisplayBuffer,
                 public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING,
                                       spi::DATA_RATE_20MHZ> {
@@ -118,12 +122,13 @@ class ST7789V : public display::DisplayBuffer,
 #ifdef USE_POWER_SUPPLY
   void set_power_supply(power_supply::PowerSupply *power_supply) { this->power_.set_parent(power_supply); }
 #endif
-
+  void set_writer(st7789_writer_t &&writer) { this->writer_local_ = writer; }
   void set_eightbitcolor(bool eightbitcolor) { this->eightbitcolor_ = eightbitcolor; }
   void set_height(uint32_t height) { this->height_ = height; }
   void set_width(uint16_t width) { this->width_ = width; }
   void set_offset_height(uint32_t offset_height) { this->offset_height_ = offset_height; }
   void set_offset_width(uint16_t offset_width) { this->offset_width_ = offset_width; }
+  void set_no_disp_buffer(bool no_disp_buffer) { this->no_disp_buffer_ = no_disp_buffer; }
 
   // ========== INTERNAL METHODS ==========
   // (In most use cases you won't need these)
@@ -144,6 +149,7 @@ class ST7789V : public display::DisplayBuffer,
   power_supply::PowerSupplyRequester power_;
 #endif
 
+  bool no_disp_buffer_{false};
   bool eightbitcolor_{false};
   uint16_t height_{0};
   uint16_t width_{0};
@@ -166,6 +172,7 @@ class ST7789V : public display::DisplayBuffer,
   void draw_absolute_pixel_internal(int x, int y, Color color) override;
 
   const char *model_str_;
+  optional<st7789_writer_t> writer_local_{};
 };
 
 }  // namespace st7789v

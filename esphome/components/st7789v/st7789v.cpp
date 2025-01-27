@@ -13,6 +13,15 @@ void ST7789V::setup() {
   this->power_.request();
   // the PowerSupply component takes care of post turn-on delay
 #endif
+
+#ifdef USE_ESP8266
+  if (this->get_buffer_length_() > (0.8 * ESP.getFreeHeap())) {
+    ESP_LOGD(TAG, "Not enough Heap RAM, force no frame buffer mode, increase SPI rate");
+    set_no_disp_buffer(true);
+    this->set_data_rate(spi::DATA_RATE_40MHZ);
+  }
+#endif
+
   this->spi_setup();
   this->dc_pin_->setup();  // OUTPUT
 
@@ -116,8 +125,13 @@ void ST7789V::setup() {
 
   backlight_(true);
 
-  this->init_internal_(this->get_buffer_length_());
-  memset(this->buffer_, 0x00, this->get_buffer_length_());
+  if (this->no_disp_buffer_) {
+    ESP_LOGD(TAG, "Skipping display buffer allocation");
+  } else {
+    ESP_LOGD(TAG, "Init display buffer allocation");
+    this->init_internal_(this->get_buffer_length_());
+    memset(this->buffer_, 0x00, this->get_buffer_length_());
+  }
 }
 
 void ST7789V::dump_config() {
@@ -128,6 +142,7 @@ void ST7789V::dump_config() {
   ESP_LOGCONFIG(TAG, "  Height Offset: %u", this->offset_height_);
   ESP_LOGCONFIG(TAG, "  Width Offset: %u", this->offset_width_);
   ESP_LOGCONFIG(TAG, "  8-bit color mode: %s", YESNO(this->eightbitcolor_));
+  ESP_LOGCONFIG(TAG, "  No Display buffer mode: %s", YESNO(this->no_disp_buffer_));
   LOG_PIN("  CS Pin: ", this->cs_);
   LOG_PIN("  DC Pin: ", this->dc_pin_);
   LOG_PIN("  Reset Pin: ", this->reset_pin_);
@@ -142,8 +157,16 @@ void ST7789V::dump_config() {
 float ST7789V::get_setup_priority() const { return setup_priority::PROCESSOR; }
 
 void ST7789V::update() {
-  this->do_update_();
-  this->write_display_data();
+  if (this->no_disp_buffer_) {
+    this->draw_filled_rect_(0, 0, this->get_width(), this->get_height(), 0X0000);
+    if (this->writer_local_.has_value())  // call lambda function if available
+      (*this->writer_local_)(*this);
+  } else {
+    this->clear();
+    if (this->writer_local_.has_value())  // call lambda function if available
+      (*this->writer_local_)(*this);
+    this->write_display_data();
+  }
 }
 
 void ST7789V::set_model_str(const char *model_str) { this->model_str_ = model_str; }
@@ -154,6 +177,9 @@ void ST7789V::write_display_data() {
   uint16_t y1 = this->offset_width_;
   uint16_t y2 = y1 + get_height_internal() - 1;
 
+  if (this->no_disp_buffer_) {
+    return;
+  }
   this->enable();
 
   // set column(x) address
@@ -293,15 +319,34 @@ void HOT ST7789V::draw_absolute_pixel_internal(int x, int y, Color color) {
   if (x >= this->get_width_internal() || x < 0 || y >= this->get_height_internal() || y < 0)
     return;
 
-  if (this->eightbitcolor_) {
-    auto color332 = display::ColorUtil::color_to_332(color);
-    uint32_t pos = (x + y * this->get_width_internal());
-    this->buffer_[pos] = color332;
-  } else {
+  if (this->no_disp_buffer_) {
+    this->enable();
+    this->dc_pin_->digital_write(false);
+    this->write_byte(ST7789_CASET);  // set column(x) address
+    this->dc_pin_->digital_write(true);
+    this->write_addr_(x, x);
+    this->dc_pin_->digital_write(false);
+    this->write_byte(ST7789_RASET);  // set Page(y) address
+    this->dc_pin_->digital_write(true);
+    this->write_addr_(y, y);
+    this->dc_pin_->digital_write(false);
+    this->write_byte(ST7789_RAMWR);  // begin a write to memory
+    this->dc_pin_->digital_write(true);
     auto color565 = display::ColorUtil::color_to_565(color);
-    uint32_t pos = (x + y * this->get_width_internal()) * 2;
-    this->buffer_[pos++] = (color565 >> 8) & 0xff;
-    this->buffer_[pos] = color565 & 0xff;
+    this->write_byte((color565 >> 8) & 0xff);
+    this->write_byte(color565 & 0xff);
+    this->disable();
+  } else {
+    if (this->eightbitcolor_) {
+      auto color332 = display::ColorUtil::color_to_332(color);
+      uint32_t pos = (x + y * this->get_width_internal());
+      this->buffer_[pos] = color332;
+    } else {
+      auto color565 = display::ColorUtil::color_to_565(color);
+      uint32_t pos = (x + y * this->get_width_internal()) * 2;
+      this->buffer_[pos++] = (color565 >> 8) & 0xff;
+      this->buffer_[pos] = color565 & 0xff;
+    }
   }
 }
 
