@@ -295,11 +295,11 @@ void HOT ST7789V::draw_absolute_pixel_internal(int x, int y, Color color) {
 
   if (this->eightbitcolor_) {
     auto color332 = display::ColorUtil::color_to_332(color);
-    uint32_t pos = (x + y * this->get_width_internal());
+    uint32_t pos = (this->get_width_internal() - x + y * this->get_width_internal());
     this->buffer_[pos] = color332;
   } else {
     auto color565 = display::ColorUtil::color_to_565(color);
-    uint32_t pos = (x + y * this->get_width_internal()) * 2;
+    uint32_t pos = (this->get_width_internal() - x + y * this->get_width_internal()) * 2;
     this->buffer_[pos++] = (color565 >> 8) & 0xff;
     this->buffer_[pos] = color565 & 0xff;
   }
