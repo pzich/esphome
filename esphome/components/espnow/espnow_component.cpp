@@ -201,7 +201,7 @@ void ESPNowComponent::enable_() {
     return;
   }
 
-  esp_wifi_get_mac(WIFI_IF_STA, this->own_address_);
+  esp_wifi_get_mac(WIFI_IF_AP, this->own_address_);
 
 #ifdef USE_DEEP_SLEEP
   esp_now_set_wake_window(CONFIG_ESPNOW_WAKE_WINDOW);
@@ -414,7 +414,7 @@ esp_err_t ESPNowComponent::add_peer(const uint8_t *peer) {
   if (!esp_now_is_peer_exist(peer)) {
     esp_now_peer_info_t peer_info = {};
     memset(&peer_info, 0, sizeof(esp_now_peer_info_t));
-    peer_info.ifidx = WIFI_IF_STA;
+    peer_info.ifidx = WIFI_IF_AP;
     memcpy(peer_info.peer_addr, peer, ESP_NOW_ETH_ALEN);
     esp_err_t err = esp_now_add_peer(&peer_info);
 
